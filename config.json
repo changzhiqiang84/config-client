@@ -1,0 +1,31 @@
+{
+    "server": {
+        "host": "192.168.11.2",
+        "port": "6000"
+    },
+    "sensor": {
+        "displayWidth": "64",
+        "displayHeight": "64",
+        "sensorWidth": "4",
+        "sensorHeight": "4",
+        "ledPanalLayoutType": 1
+    },
+    "receiveCards": {
+        "receiveXCount": 2,
+        "receiveYCount": 1,
+        "layout": [
+            {
+                "x": 0,
+                "y": 0,
+                "netPort": 4,
+                "card": 1
+            },
+            {
+                "x": 1,
+                "y": 0,
+                "netPort": 1,
+                "card": 2
+            }
+        ]
+    }
+}
