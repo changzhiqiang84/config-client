@@ -6,6 +6,10 @@
  * @LastEditTime: 2021-11-24 14:37:34
  */
 const electron = require('electron');
+const child_process = require('child_process');
+const path = require('path');
+const fsex = require("fs-extra")
+import { Tab } from '@material-ui/core';
 import React, { Component } from 'react';
 import { Window, Button,Label,Radio,View,NavPane, NavPaneItem, Text,TextInput } from 'react-desktop/windows';
 import ReactDOM from 'react-dom';
@@ -32,12 +36,21 @@ class MainComponent extends Component {
       ledPanalLayoutType:config.sensor.ledPanalLayoutType,
       receiveXCount:config.receiveCards.receiveXCount,
       receiveYCount:config.receiveCards.receiveYCount,
-      layout:config.receiveCards.layout
+      layout:config.receiveCards.layout,
+      playList: [],
+      addPlay: false
     }
     this.handleServerSave = this.handleServerSave.bind(this);
     this.handleReceiveCardSave= this.handleReceiveCardSave.bind(this);
     this.handleSensorSave= this.handleSensorSave.bind(this);
     this.handleReceiveCardReset= this.handleReceiveCardReset.bind(this);
+
+    
+    this.handlePlayAdd= this.handlePlayAdd.bind(this);
+    this.handlePlayStart= this.handlePlayStart.bind(this);
+    this.handlePlayStop= this.handlePlayStop.bind(this);
+    this.handlePlayPrev= this.handlePlayPrev.bind(this);
+    this.handlePlayStop= this.handlePlayStop.bind(this);
     
     
     this.handleReceiveX = this.handleReceiveX.bind(this);
@@ -53,6 +66,12 @@ class MainComponent extends Component {
 
   }
 
+  componentDidMount() {
+    let dir = path.resolve('D:\\app\\SwfScrollPlayer','./config.json');
+    fsex.readJson(dir).then(data => {
+      this.setState({ playList: data.swfs })
+    });
+  }
 
   render() {
     return (
@@ -68,9 +87,88 @@ class MainComponent extends Component {
         {this.renderLayoutSettings('灯板配置', 'Content 1')}
         {this.renderReceiveCard('接收卡配置', 'Content 2')}
         {this.renderServerSettings('服务器设置', 'Content 3')}
+        {this.renderPlaySettings('播放列表', 'Content 4')}
       </NavPane>
       </Window>
 
+    );
+  }
+
+  renderPlaySettings(title, content) {
+    return (
+      <NavPaneItem
+        title={title}
+        icon={this.renderIcon(title)}
+        theme="light"
+        background="#ffffff"
+        selected={this.state.selected === title}
+        onSelect={() => this.setState({ selected: title })}
+        padding="10px 20px"
+        push
+      >
+        <Label>播放列表：</Label>
+        <div style={{ overflow:'auto',maxHeight:'40%'}}>
+          <table border="1px solid rgba(255, 255, 255, 0.1)" width={'100%'}>
+            <tr>
+              <th>路径</th>
+              <th>时长</th>
+            </tr>
+            {
+              this.state.playList.map( item => (
+                <tr>
+                  <td>{item.path}</td>
+                  <td>{item.duration}</td>
+                </tr>
+              ))
+            }
+          </table>
+        </div>
+        <View horizontalAlignment="center" verticalAlignment="center" layout="horizontal" padding="50px" margin="0px 10px" theme={this.props.theme}>  
+          <Button push color={this.props.color} theme={this.props.theme} onClick={this.handlePlayAdd}>
+            添加
+          </Button>  
+          <Button push color={this.props.color} theme={this.props.theme} style={{marginLeft: '10px'}} onClick={this.handlePlayStart}>
+            启动
+          </Button>
+          <Button push color={this.props.color} theme={this.props.theme} style={{marginLeft: '10px'}} onClick={this.handlePlayStop}>
+            停止
+          </Button>
+          <Button push color={this.props.color} theme={this.props.theme} style={{marginLeft: '10px'}} onClick={this.handlePlayPrev}>
+            上一个
+          </Button>
+          <Button push color={this.props.color} theme={this.props.theme} style={{marginLeft: '10px'}} onClick={this.handlePlayNext}>
+            下一个
+          </Button>
+        </View>
+
+        {
+          this.state.addPlay && (
+            <View horizontalAlignment="center" verticalAlignment="center" layout="horizontal" padding="50px" margin="0px 10px" theme={this.props.theme}>  
+              <TextInput
+                ref={this.pathInput}
+                theme={this.props.theme}
+                color={this.props.color}
+                background
+                label="路径"
+                labelColor = "black"
+                placeholder="请输入播放内容的路径"
+              />
+              <TextInput
+                ref={this.durationInput}
+                theme={this.props.theme}
+                color={this.props.color}
+                background
+                label="时长"
+                labelColor = "black"
+                placeholder="请输入播放内容的时长"
+              />
+              <Button push color={this.props.color} theme={this.props.theme} type = "submit" onClick={this.handlePlaySave}>
+                保存
+              </Button>
+            </View>
+          )
+        }
+      </NavPaneItem>
     );
   }
 
@@ -177,6 +275,32 @@ class MainComponent extends Component {
     })
   }
 
+  handlePlayAdd() {
+    this.setState({ 
+      addPlay: true
+    })
+  }
+
+  handlePlayStart() {
+    let cmd = `D:\\app\\SwfScrollPlayer`
+    // let cmd = path.resolve(__dirname,'../SwfScrollPlayer')
+    child_process.exec('.\\PlayerStarter.exe start .\\config.json', {cwd: cmd})
+  }
+
+  handlePlayStop() {
+    let cmd = `D:\\app\\SwfScrollPlayer`
+    child_process.exec('.\\PlayerStarter.exe stop .\\config.json', {cwd: cmd})
+  }
+  
+  handlePlayPrev() {
+    let cmd = `D:\\app\\SwfScrollPlayer`
+    child_process.exec('.\\PlayerStarter.exe prev .\\config.json', {cwd: cmd})
+  }
+
+  handlePlayNext() {
+    let cmd = `D:\\app\\SwfScrollPlayer`
+    child_process.exec('.\\PlayerStarter.exe next .\\config.json', {cwd: cmd})
+  }
   validInt(number){
     return !isNaN(parseInt(number));
   }
@@ -302,6 +426,21 @@ class MainComponent extends Component {
     }))
   }
 
+  handlePlaySave (){
+    this.setState({
+      path: this.pathInput.current.value,
+      duration:this.durationInput.current.value ? parseInt(this.durationInput.current.value) : 0
+    })
+    
+    let packagejson = {
+      "name": options.name,
+      "version": options.version,
+      "private": true,
+      "main": "dist/app.js",
+  }
+  fsex.writeJSON(path.resolve(release_app_dir,'./package.json'),packagejson);
+  }
+  
   renderLayoutSettings(title, content) {
     return (
       <NavPaneItem
@@ -421,6 +560,11 @@ class MainComponent extends Component {
   renderIcon(name) {
     const fill = this.props.theme === 'dark' ? '#ffffff' : '#000000';
     switch(name) {
+    case '播放列表':
+      return (
+<svg t="1650446718273" viewBox="0 0 1024 1024" p-id="2043" width="25px" height="25px">
+  <path d="M85.312 164.8v604.8h853.376v-604.8H85.312zM682.688 870.4V960H341.312v-89.6H0V64h1024v806.4h-341.312zM390.08 632.128L128 503.04V422.336l262.08-128.64V390.4L230.784 462.976l159.296 72.832v96.32zM529.6 256H576l-82.048 413.184H448L529.6 256z m104.32 376.128V535.808l159.296-72.832-159.296-72.512V293.632L896 422.4v80.768L633.92 632.128z" fill="#ffffff" p-id="2044"></path></svg>
+      );
     case '灯板配置':
       return (
        <svg t="1637666317316"  viewBox="0 0 1024 1024" p-id="7374" width="25px" height="25px">
