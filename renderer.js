@@ -9,13 +9,12 @@ const electron = require('electron');
 const child_process = require('child_process');
 const path = require('path');
 const fsex = require("fs-extra")
-import { Tab } from '@material-ui/core';
+const { copyFileSync } = require('fs')
 import React, { Component } from 'react';
 import { Window, Button,Label,Radio,View,NavPane, NavPaneItem, Text,TextInput } from 'react-desktop/windows';
 import ReactDOM from 'react-dom';
-
 let config = window.readConfig();
-
+let playerConfig = window.readPlayerConfig();
 
 class MainComponent extends Component {
   static defaultProps = {
@@ -26,7 +25,7 @@ class MainComponent extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      selected: '灯板配置',
+      selected: '播放列表',
       host:config.server.host,
       port:config.server.port,
       displayWidth:config.sensor.displayWidth,
@@ -37,16 +36,16 @@ class MainComponent extends Component {
       receiveXCount:config.receiveCards.receiveXCount,
       receiveYCount:config.receiveCards.receiveYCount,
       layout:config.receiveCards.layout,
-      playList: [],
-      addPlay: false
+      playList: {}
     }
     this.handleServerSave = this.handleServerSave.bind(this);
     this.handleReceiveCardSave= this.handleReceiveCardSave.bind(this);
     this.handleSensorSave= this.handleSensorSave.bind(this);
     this.handleReceiveCardReset= this.handleReceiveCardReset.bind(this);
 
-    
-    this.handlePlayAdd= this.handlePlayAdd.bind(this);
+    // this.beforeUpload = this.beforeUpload.bind(this);
+    this.handleUpload= this.handleUpload.bind(this);
+    this.handleSave = this.handleSave.bind(this)
     this.handlePlayStart= this.handlePlayStart.bind(this);
     this.handlePlayStop= this.handlePlayStop.bind(this);
     this.handlePlayPrev= this.handlePlayPrev.bind(this);
@@ -66,11 +65,40 @@ class MainComponent extends Component {
 
   }
 
+  initPlayList(obj) {
+    playerConfig && playerConfig.swfs && playerConfig.swfs.map((item, index) => (
+      item.index = index + 1
+    ))
+    obj.setState({ playList: playerConfig })
+  }
+
+  writePlayList(obj, data) {
+    window.writePlayerConfig(data);
+    playerConfig = window.readPlayerConfig()
+    obj.initPlayList(obj);
+  }
+
   componentDidMount() {
-    let dir = path.resolve('D:\\app\\SwfScrollPlayer','./config.json');
-    fsex.readJson(dir).then(data => {
-      this.setState({ playList: data.swfs })
-    });
+    this.initPlayList(this)
+    const fileUploader = document.getElementById('btn_file')
+    if (fileUploader) {
+      fileUploader.addEventListener('change', (event) => {
+          const files = event.target.files
+          let obj = Object.assign({}, this.state.playList)
+          for (let f = 0; f < files.length; f++) {  
+            let name = files[f].name
+            copyFileSync(files[f].path, 'D://test/' + name)
+            console.log('Copy completed!') 
+            obj.swfs.push(
+              {
+                path: name,
+                duration: 10
+              }
+            )
+          }
+          this.writePlayList(this, obj)
+      })
+  }
   }
 
   render() {
@@ -84,10 +112,10 @@ class MainComponent extends Component {
       >
       {/* <TitleBar title="My Windows Application" controls onCloseClick={() => process.exit()}/> */}
       <NavPane openLength={200} push color={this.props.color} theme={this.props.theme}>
+        {this.renderPlaySettings('播放列表', 'Content 4')}
         {this.renderLayoutSettings('灯板配置', 'Content 1')}
         {this.renderReceiveCard('接收卡配置', 'Content 2')}
         {this.renderServerSettings('服务器设置', 'Content 3')}
-        {this.renderPlaySettings('播放列表', 'Content 4')}
       </NavPane>
       </Window>
 
@@ -104,29 +132,45 @@ class MainComponent extends Component {
         selected={this.state.selected === title}
         onSelect={() => this.setState({ selected: title })}
         padding="10px 20px"
-        push
+        push2
       >
-        <Label>播放列表：</Label>
-        <div style={{ overflow:'auto',maxHeight:'40%'}}>
-          <table border="1px solid rgba(255, 255, 255, 0.1)" width={'100%'}>
-            <tr>
-              <th>路径</th>
-              <th>时长</th>
-            </tr>
-            {
-              this.state.playList.map( item => (
-                <tr>
-                  <td>{item.path}</td>
-                  <td>{item.duration}</td>
-                </tr>
-              ))
-            }
+        <div style={{ overflow:'auto',maxHeight:'70%'}}>
+          <table color={this.props.color} theme={this.props.theme} style={{borderSpacing: 0,lineHeight: 2,textAlign: 'center', border: '1px solid rgb(204, 127, 41, 0.8)'}} border="1px solid rgba(255, 255, 255, 0.1)" width={'95%'}>
+            <thead>
+              <tr>
+                <th>序号</th>
+                <th>名称</th>
+                <th>时长(秒)</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {
+                this.state.playList && this.state.playList.swfs && this.state.playList.swfs.map( (item, index) => (
+                  <tr>
+                    <td>{item.index}</td>
+                    <td>
+                      <input type="text" name="path" value={item.path} onChange={() => this.handleChange(event, item, 'path')}></input>
+                    </td>
+                    <td>
+                      <input type="text" name="duration" value={item.duration} onChange={() => this.handleChange(event, item, 'duration')}></input>
+                    </td>
+                    <td>
+                      <a href="#" onClick={() => this.handleDelete(item)}>删除</a>
+                    </td>
+                  </tr>
+                ))
+              }
+            </tbody>
           </table>
+          {/* {
+            this.state.playList.length > 0 && <Table columns={columns} dataSource={this.state.playList} color={this.props.color} theme={this.props.theme} width={'100%'}/>
+          } */}
         </div>
         <View horizontalAlignment="center" verticalAlignment="center" layout="horizontal" padding="50px" margin="0px 10px" theme={this.props.theme}>  
-          <Button push color={this.props.color} theme={this.props.theme} onClick={this.handlePlayAdd}>
-            添加
-          </Button>  
+          <Button push color={this.props.color} theme={this.props.theme} style={{marginLeft: '10px'}} onClick={this.handleUpload}>
+           添加
+          </Button>
           <Button push color={this.props.color} theme={this.props.theme} style={{marginLeft: '10px'}} onClick={this.handlePlayStart}>
             启动
           </Button>
@@ -139,35 +183,11 @@ class MainComponent extends Component {
           <Button push color={this.props.color} theme={this.props.theme} style={{marginLeft: '10px'}} onClick={this.handlePlayNext}>
             下一个
           </Button>
+          <Button push color={this.props.color} theme={this.props.theme} style={{marginLeft: '10px'}} onClick={this.handleSave}>
+          保存
+          </Button>
+          <input type="file" id="btn_file" multiple style={{display: 'none'}}/>
         </View>
-
-        {
-          this.state.addPlay && (
-            <View horizontalAlignment="center" verticalAlignment="center" layout="horizontal" padding="50px" margin="0px 10px" theme={this.props.theme}>  
-              <TextInput
-                ref={this.pathInput}
-                theme={this.props.theme}
-                color={this.props.color}
-                background
-                label="路径"
-                labelColor = "black"
-                placeholder="请输入播放内容的路径"
-              />
-              <TextInput
-                ref={this.durationInput}
-                theme={this.props.theme}
-                color={this.props.color}
-                background
-                label="时长"
-                labelColor = "black"
-                placeholder="请输入播放内容的时长"
-              />
-              <Button push color={this.props.color} theme={this.props.theme} type = "submit" onClick={this.handlePlaySave}>
-                保存
-              </Button>
-            </View>
-          )
-        }
       </NavPaneItem>
     );
   }
@@ -275,31 +295,56 @@ class MainComponent extends Component {
     })
   }
 
-  handlePlayAdd() {
-    this.setState({ 
-      addPlay: true
+  handleChange(e, data, flag){
+    if(e.target.value === undefined){      
+      return false;
+    }
+
+    let obj = Object.assign({}, this.state.playList)
+    if (obj && obj.swfs) {
+      obj.swfs.map(item => {
+        if (item.index === data.index) {
+          item.path = flag === 'path' ? e.target.value : data.path
+          item.duration = flag === 'duration' ? e.target.value : data.duration
+        }
+      })
+    }
+    this.setState({      
+      playList: obj
     })
   }
 
+  handleDelete(data) {
+    let obj = Object.assign({}, this.state.playList)
+    if (obj && obj.swfs) {
+      obj.swfs = obj.swfs.filter(item => item.index !== data.index)
+    }
+    this.writePlayList(this, obj)
+  }
+
+  handleSave() {
+    let obj = Object.assign({}, this.state.playList)
+    this.writePlayList(this, obj)
+  }
+
+  handleUpload() {
+    document.getElementById('btn_file').click()
+}
+
   handlePlayStart() {
-    let cmd = `D:\\app\\SwfScrollPlayer`
-    // let cmd = path.resolve(__dirname,'../SwfScrollPlayer')
-    child_process.exec('.\\PlayerStarter.exe start .\\config.json', {cwd: cmd})
+    child_process.exec('.\\PlayerStarter.exe start .\\config.json', {cwd: playerConfig.playerPath})
   }
 
   handlePlayStop() {
-    let cmd = `D:\\app\\SwfScrollPlayer`
-    child_process.exec('.\\PlayerStarter.exe stop .\\config.json', {cwd: cmd})
+    child_process.exec('.\\PlayerStarter.exe stop .\\config.json', {cwd: playerConfig.playerPath})
   }
   
   handlePlayPrev() {
-    let cmd = `D:\\app\\SwfScrollPlayer`
-    child_process.exec('.\\PlayerStarter.exe prev .\\config.json', {cwd: cmd})
+    child_process.exec('.\\PlayerStarter.exe prev .\\config.json', {cwd: playerConfig.playerPath})
   }
 
-  handlePlayNext() {
-    let cmd = `D:\\app\\SwfScrollPlayer`
-    child_process.exec('.\\PlayerStarter.exe next .\\config.json', {cwd: cmd})
+  handlePlayNext() {  
+    child_process.exec('.\\PlayerStarter.exe next .\\config.json', {cwd: playerConfig.playerPath})
   }
   validInt(number){
     return !isNaN(parseInt(number));
