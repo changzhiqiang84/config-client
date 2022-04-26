@@ -87,8 +87,7 @@ class MainComponent extends Component {
           let obj = Object.assign({}, this.state.playList)
           for (let f = 0; f < files.length; f++) {  
             let name = files[f].name
-            copyFileSync(files[f].path, 'D://test/' + name)
-            console.log('Copy completed!') 
+            copyFileSync(files[f].path, path.join(playerConfig.playerPath, '/video/' + name))
             obj.swfs.push(
               {
                 path: name,
