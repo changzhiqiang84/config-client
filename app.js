@@ -15,6 +15,7 @@ const os = require('os');
 const child_process = require('child_process');
 const tracer = require('tracer');
 const robot = require("robotjs");
+const { Menu } = require('electron');
 
 const BUFFER_0 = Buffer.from('00', 'hex');
 const BUFFER_1 = Buffer.from('01', 'hex');
@@ -221,6 +222,7 @@ class App {
       if (global.app.release && !global.app.config.mplayer)
         ontop = true
       let size = electron.screen.getPrimaryDisplay().size;
+      Menu.setApplicationMenu(null);
       let options = {
         width: 1024,
         height: 728,

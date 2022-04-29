@@ -9,7 +9,8 @@ const electron = require('electron');
 const child_process = require('child_process');
 const path = require('path');
 const fsex = require("fs-extra")
-const { copyFileSync } = require('fs')
+const { copyFileSync, unlink } = require('fs')
+
 import React, { Component } from 'react';
 import { Window, Button,Label,Radio,View,NavPane, NavPaneItem, Text,TextInput } from 'react-desktop/windows';
 import ReactDOM from 'react-dom';
@@ -21,7 +22,6 @@ class MainComponent extends Component {
     color: '#cc7f29',
     theme: 'dark'
   };
-
   constructor(props) {
     super(props);
     this.state = {
@@ -66,7 +66,9 @@ class MainComponent extends Component {
   }
 
   initPlayList(obj) {
+    let pt = path.join(process.env.PUBLIC, '/ReactDesktop/video/')
     playerConfig && playerConfig.swfs && playerConfig.swfs.map((item, index) => (
+      item.path = item.path.replace(pt, ''),
       item.index = index + 1
     ))
     obj.setState({ playList: playerConfig })
@@ -79,6 +81,11 @@ class MainComponent extends Component {
   }
 
   componentDidMount() {
+    try {
+      fsex.ensureDirSync(path.resolve(process.env.PUBLIC, './ReactDesktop/video/'))
+    } catch (error) {
+      console.log(error)
+    }
     this.initPlayList(this)
     const fileUploader = document.getElementById('btn_file')
     if (fileUploader) {
@@ -87,10 +94,10 @@ class MainComponent extends Component {
           let obj = Object.assign({}, this.state.playList)
           for (let f = 0; f < files.length; f++) {  
             let name = files[f].name
-            copyFileSync(files[f].path, path.join(playerConfig.playerPath, '/video/' + name))
+            copyFileSync(files[f].path, path.resolve(process.env.PUBLIC, './ReactDesktop/video/'+ name))
             obj.swfs.push(
               {
-                path: name,
+                path: path.resolve(process.env.PUBLIC, './ReactDesktop/video/'+ name),
                 duration: 10
               }
             )
@@ -133,7 +140,7 @@ class MainComponent extends Component {
         padding="10px 20px"
         push2
       >
-        <div style={{ overflow:'auto',maxHeight:'70%'}}>
+        <div style={{ overflow:'auto',maxHeight:'65%'}}>
           <table color={this.props.color} theme={this.props.theme} style={{borderSpacing: 0,lineHeight: 2,textAlign: 'center', border: '1px solid rgb(204, 127, 41, 0.8)'}} border="1px solid rgba(255, 255, 255, 0.1)" width={'95%'}>
             <thead>
               <tr>
@@ -314,6 +321,9 @@ class MainComponent extends Component {
   }
 
   handleDelete(data) {
+    unlink(playerConfig.playerPath + '/video/' + data.path, () => {
+      console.log('删除成功')
+    })
     let obj = Object.assign({}, this.state.playList)
     if (obj && obj.swfs) {
       obj.swfs = obj.swfs.filter(item => item.index !== data.index)
@@ -323,6 +333,11 @@ class MainComponent extends Component {
 
   handleSave() {
     let obj = Object.assign({}, this.state.playList)
+    if (obj && obj.swfs) {
+      obj.swfs.map(item => {
+        item.path = path.resolve(process.env.PUBLIC, './ReactDesktop/video/'+ item.path)
+      })
+    }
     this.writePlayList(this, obj)
   }
 
