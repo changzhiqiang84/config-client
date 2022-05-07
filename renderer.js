@@ -9,7 +9,7 @@ const electron = require('electron');
 const child_process = require('child_process');
 const path = require('path');
 const fsex = require("fs-extra")
-const { copyFileSync, unlink } = require('fs')
+const { copyFileSync, unlink, readFileSync, writeFileSync } = require('fs')
 
 import React, { Component } from 'react';
 import { Window, Button,Label,Radio,View,NavPane, NavPaneItem, Text,TextInput } from 'react-desktop/windows';
@@ -65,8 +65,20 @@ class MainComponent extends Component {
 
   }
 
+  initSize() {
+    debugger
+    let width = this.state.displayWidth * this.state.receiveXCount
+    let height = this.state.displayHeight * this.state.receiveYCount
+    let configPath = path.resolve(process.env.PUBLIC, './TileLEDPlayer/config.json');
+    let playConfig = JSON.parse(readFileSync(configPath));
+    playConfig.width = width
+    playConfig.height = height
+    writeFileSync(configPath, JSON.stringify(playConfig, null, 4));
+  }
+
   initPlayList(obj) {
-    let pt = path.join(process.env.PUBLIC, '/ReactDesktop/video/')
+    playerConfig = window.readPlayerConfig()
+    let pt = path.join(process.env.PUBLIC, '/TileLEDPlayer/video/')
     playerConfig && playerConfig.swfs && playerConfig.swfs.map((item, index) => (
       item.path = item.path.replace(pt, ''),
       item.index = index + 1
@@ -76,35 +88,46 @@ class MainComponent extends Component {
 
   writePlayList(obj, data) {
     window.writePlayerConfig(data);
-    playerConfig = window.readPlayerConfig()
     obj.initPlayList(obj);
   }
 
-  componentDidMount() {
-    try {
-      fsex.ensureDirSync(path.resolve(process.env.PUBLIC, './ReactDesktop/video/'))
-    } catch (error) {
-      console.log(error)
-    }
-    this.initPlayList(this)
-    const fileUploader = document.getElementById('btn_file')
+  uploadControl() {
+    let fileUploader = document.getElementById('btn_file')
     if (fileUploader) {
       fileUploader.addEventListener('change', (event) => {
           const files = event.target.files
           let obj = Object.assign({}, this.state.playList)
+          obj && obj.swfs && obj.swfs.map((item, index) => (
+            item.path = path.join(process.env.PUBLIC, '/TileLEDPlayer/video/' + item.path)
+          ))
           for (let f = 0; f < files.length; f++) {  
             let name = files[f].name
-            copyFileSync(files[f].path, path.resolve(process.env.PUBLIC, './ReactDesktop/video/'+ name))
+            copyFileSync(files[f].path, path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ name))
             obj.swfs.push(
               {
-                path: path.resolve(process.env.PUBLIC, './ReactDesktop/video/'+ name),
+                path: path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ name),
                 duration: 10
               }
             )
           }
           this.writePlayList(this, obj)
+          fileUploader.value = ''
       })
+    }
   }
+
+  componentDidMount() {
+    this.initSize()
+    this.initPlayList(this)
+    this.uploadControl()
+  }
+
+  playInit(title) {
+    this.initPlayList(this)
+    this.setState({ selected: title })
+    setTimeout( ()=>{
+      this.uploadControl()
+    }, 1500)
   }
 
   render() {
@@ -136,7 +159,7 @@ class MainComponent extends Component {
         theme="light"
         background="#ffffff"
         selected={this.state.selected === title}
-        onSelect={() => this.setState({ selected: title })}
+        onSelect={() => this.playInit(title)}
         padding="10px 20px"
         push2
       >
@@ -321,12 +344,15 @@ class MainComponent extends Component {
   }
 
   handleDelete(data) {
-    unlink(playerConfig.playerPath + '/video/' + data.path, () => {
+    unlink(path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ data.path), () => {
       console.log('删除成功')
     })
     let obj = Object.assign({}, this.state.playList)
     if (obj && obj.swfs) {
       obj.swfs = obj.swfs.filter(item => item.index !== data.index)
+      obj.swfs.map((item, index) => (
+        item.path = path.join(process.env.PUBLIC, '/TileLEDPlayer/video/' + item.path)
+      ))
     }
     this.writePlayList(this, obj)
   }
@@ -335,7 +361,7 @@ class MainComponent extends Component {
     let obj = Object.assign({}, this.state.playList)
     if (obj && obj.swfs) {
       obj.swfs.map(item => {
-        item.path = path.resolve(process.env.PUBLIC, './ReactDesktop/video/'+ item.path)
+        item.path = path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ item.path)
       })
     }
     this.writePlayList(this, obj)
@@ -346,19 +372,21 @@ class MainComponent extends Component {
 }
 
   handlePlayStart() {
-    child_process.exec('.\\PlayerStarter.exe start .\\config.json', {cwd: playerConfig.playerPath})
+    if(this.state.playList && this.state.playList.swfs && this.state.playList.swfs.length > 0) {
+      child_process.exec('.\\PlayerStarter.exe start '+ path.resolve(process.env.PUBLIC, './TileLEDPlayer/config.json'), {cwd: playerConfig.playerPath})
+    }
   }
 
   handlePlayStop() {
-    child_process.exec('.\\PlayerStarter.exe stop .\\config.json', {cwd: playerConfig.playerPath})
+    child_process.exec('.\\PlayerStarter.exe stop '+ path.resolve(process.env.PUBLIC, './TileLEDPlayer/config.json'), {cwd: playerConfig.playerPath})
   }
   
   handlePlayPrev() {
-    child_process.exec('.\\PlayerStarter.exe prev .\\config.json', {cwd: playerConfig.playerPath})
+    child_process.exec('.\\PlayerStarter.exe prev '+ path.resolve(process.env.PUBLIC, './TileLEDPlayer/config.json'), {cwd: playerConfig.playerPath})
   }
 
   handlePlayNext() {  
-    child_process.exec('.\\PlayerStarter.exe next .\\config.json', {cwd: playerConfig.playerPath})
+    child_process.exec('.\\PlayerStarter.exe next '+ path.resolve(process.env.PUBLIC, './TileLEDPlayer/config.json'), {cwd: playerConfig.playerPath})
   }
   validInt(number){
     return !isNaN(parseInt(number));

@@ -159,13 +159,25 @@ class App {
       global.app.rootdir = path.resolve(__dirname, './');
     } else {
       global.app.entrydir = path.resolve(__dirname, './');
-      global.app.rootdir = path.resolve(path.dirname(process.argv[0]), './');
+      global.app.rootdir = path.resolve(path.dirname(process.argv[0]), './resources/app');
     }
 
     if (global.app.release) {
       if (process.platform == 'win32') {
         // global.app.datadir = path.resolve(process.env.PUBLIC, `./inspires/${global.app.package.name}`)
-        global.app.datadir = global.app.rootdir+"/resources/app";
+        // global.app.datadir = global.app.rootdir+"/resources/app";
+        global.app.datadir = path.resolve(process.env.PUBLIC, './TileLEDPlayer/app');
+
+        try {
+          fsex.ensureDirSync(path.resolve(process.env.PUBLIC, './TileLEDPlayer/app/'))
+          fs.accessSync(path.resolve(process.env.PUBLIC, './TileLEDPlayer/app/config.json'), fs.constants.R_OK | fs.constants.W_OK)
+        } catch (error) {
+          try {
+            fs.copyFileSync(global.app.rootdir + "\\config.json", path.resolve(process.env.PUBLIC, './TileLEDPlayer/app/config.json'))
+          } catch (error) {
+            console.log(error)
+          }
+        }
       } else {
         global.app.datadir = `/etc/inspires`
       }
@@ -214,6 +226,16 @@ class App {
     }
     js = Object.assign(js, data);
     fs.writeFileSync(global.app.configfilename, JSON.stringify(js, null, 4));
+
+    if(js.sensor && js.receiveCards) {
+      let width = js.sensor.displayWidth * js.receiveCards.receiveXCount
+      let height = js.sensor.displayHeight * js.receiveCards.receiveYCount
+      let configPath =path.resolve(process.env.PUBLIC, './TileLEDPlayer/config.json');
+      let playConfig = JSON.parse(fs.readFileSync(configPath));
+      playConfig.width = width
+      playConfig.height = height
+      fs.writeFileSync(configPath, JSON.stringify(playConfig, null, 4));
+    }
   }
 
   createMainPage() {
@@ -227,7 +249,7 @@ class App {
         width: 1024,
         height: 728,
         webPreferences: {
-          preload: path.join(global.app.datadir, 'preload.js'),
+          preload: path.join(global.app.rootdir, 'preload.js'),
           enableRemoteModule:true,
           nodeIntegration: true,
           contextIsolation:false          

@@ -8,8 +8,8 @@
     "start": "electron .",
     "watch": "webpack-dev-server --config ./webpack.config.js --colors --inline --port 16000",
     "build": "webpack --config ./webpack.config.js",
-    "package": "electron-packager ./ ReactDesktop --all --overwrite --out=./packaged/",
-    "package:windows": "electron-packager ./ ReactDesktop --platform=win32 --overwrite --out=./packaged/",
+    "package": "electron-packager ./ TileLEDPlayer --all --overwrite --out=./packaged/",
+    "package:windows": "electron-packager ./ TileLEDPlayer --platform=win32 --overwrite --out=./packaged/",
     "package:mac": "electron-builder build --mac --config electron-builder.json --publish never",
     "test": "jest --watch"
   },
