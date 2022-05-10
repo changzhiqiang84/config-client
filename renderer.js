@@ -101,6 +101,8 @@ class MainComponent extends Component {
           ))
           for (let f = 0; f < files.length; f++) {  
             let name = files[f].name
+            let tmp = path.join(process.env.PUBLIC, '/TileLEDPlayer/video/' + name)
+            obj.swfs = obj.swfs.filter(item => item.path !== tmp)
             copyFileSync(files[f].path, path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ name))
             obj.swfs.push(
               {
@@ -262,7 +264,7 @@ class MainComponent extends Component {
           />
       </View>
       <Label>布局配置：</Label>
-      <div style={{ overflow:'auto',height:'40%',width:'60%'}}>
+      <div style={{ overflow:'auto',height:'40%',width:'fit-content', maxWidth:'80vw'}}>
       {
         receiveYArr.map( ii =>(
                 <View padding="0px 20px" horizontalAlignment='left' layout='horizontal' theme={this.props.theme}>{
@@ -296,7 +298,7 @@ class MainComponent extends Component {
       } 
       </div>
       {/* <div style={{position: 'absolute',bottom: '0px',width: '100%'}}> */}
-      <View horizontalAlignment="center" verticalAlignment="center" layout="horizontal" padding="50px" margin="10px 10px" theme={this.props.theme}>    
+      <View horizontalAlignment="left" verticalAlignment="center" layout="horizontal" padding="50px" margin="10px 10px" theme={this.props.theme}>    
         <Button push color={this.props.color} theme={this.props.theme} type = "submit" onClick={this.handleReceiveCardReset}>
             重置
           </Button>
@@ -343,9 +345,9 @@ class MainComponent extends Component {
   }
 
   handleDelete(data) {
-    // unlink(path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ data.path), () => {
-    //   console.log('删除成功')
-    // })
+    unlink(path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ data.path), () => {
+      console.log('删除成功')
+    })
     let obj = Object.assign({}, this.state.playList)
     if (obj && obj.swfs) {
       obj.swfs = obj.swfs.filter(item => item.index !== data.index)
@@ -493,9 +495,11 @@ class MainComponent extends Component {
           placeholder="请输入发送卡服务器端口"
           defaultValue = {this.state.port}
         />
-         <Button push color={this.props.color} theme={this.props.theme} type = "submit" onClick={this.handleServerSave}>
-          保存
-        </Button>
+        <View horizontalAlignment="left" verticalAlignment="center" layout="horizontal" padding="50px" margin="10px 10px" theme={this.props.theme}>    
+          <Button push color={this.props.color} theme={this.props.theme} type = "submit" onClick={this.handleServerSave}>
+            保存
+          </Button>
+        </View>
       </NavPaneItem>
     );
   }
@@ -611,10 +615,11 @@ class MainComponent extends Component {
           />
         </View>  
 
-
-         <Button push color={this.props.color} theme={this.props.theme} type = "submit" onClick={this.handleSensorSave}>
-          保存
-        </Button>
+        <View horizontalAlignment="left" verticalAlignment="center" layout="horizontal" padding="50px" margin="10px 10px" theme={this.props.theme}>    
+          <Button push color={this.props.color} theme={this.props.theme} type = "submit" onClick={this.handleSensorSave}>
+            保存
+          </Button>
+        </View>
       </NavPaneItem>
     );
   }
