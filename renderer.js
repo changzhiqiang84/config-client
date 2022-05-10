@@ -66,7 +66,6 @@ class MainComponent extends Component {
   }
 
   initSize() {
-    debugger
     let width = this.state.displayWidth * this.state.receiveXCount
     let height = this.state.displayHeight * this.state.receiveYCount
     let configPath = path.resolve(process.env.PUBLIC, './TileLEDPlayer/config.json');
@@ -344,9 +343,9 @@ class MainComponent extends Component {
   }
 
   handleDelete(data) {
-    unlink(path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ data.path), () => {
-      console.log('删除成功')
-    })
+    // unlink(path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ data.path), () => {
+    //   console.log('删除成功')
+    // })
     let obj = Object.assign({}, this.state.playList)
     if (obj && obj.swfs) {
       obj.swfs = obj.swfs.filter(item => item.index !== data.index)
