@@ -119,24 +119,79 @@ class App {
     this.loadSettings();
     this.startTCPClient(global.app.config.server.host, global.app.config.server.port);
     //
+    electron.ipcMain.on('playlist-change', (e, args) => {
+      if (args) {
+        electron.dialog.showMessageBox({
+          type: 'error',
+          title:'播放列表',
+          message:"保存信息有误",
+        })
+      } else {
+        electron.dialog.showMessageBox({
+          type: 'info',
+          title:'播放列表',
+          message:"保存成功",
+        })
+      }
+    });
     electron.ipcMain.on('server-change', (e, args) => {
       let last = JSON.parse(JSON.stringify(global.app.config));
       let data = JSON.parse(args);
+      if (!data.host || data.port === '' || data.port === undefined) {
+        electron.dialog.showMessageBox({
+          type: 'error',
+          title:'服务器设置',
+          message:"保存信息有误",
+        })
+        return
+      }
       if (data.host != last.server.host || data.port != last.server.port) {
         global.app.config.server=data;
         this._saveConfig(global.app.config);
         this.startTCPClient(data.host, data.port);
       }
+
+      electron.dialog.showMessageBox({
+        type: 'info',
+        title:'服务器设置',
+        message:"保存成功",
+      })
     });
     electron.ipcMain.on('card-change', (e, args) => {
       let data = JSON.parse(args);
+      if (data.receiveXCount === '' || data.receiveYCount === '') {
+        electron.dialog.showMessageBox({
+          type: 'error',
+          title:'接收卡设置',
+          message:"保存信息有误",
+        })
+        return
+      }
         global.app.config.receiveCards=data;
         this._saveConfig(global.app.config);
+        electron.dialog.showMessageBox({
+          type: 'info',
+          title:'接收卡设置',
+          message:"保存成功",
+        })
     });
     electron.ipcMain.on('sensor-change', (e, args) => {
       let data = JSON.parse(args);
+      if (data.displayWidth === '' || data.displayHeight === '' || data.sensorWidth === '' || data.sensorHeight === '') {
+        electron.dialog.showMessageBox({
+          type: 'error',
+          title:'灯板设置',
+          message:"保存信息有误",
+        })
+        return
+      }
         global.app.config.sensor=data;
         this._saveConfig(global.app.config);
+        electron.dialog.showMessageBox({
+          type: 'info',
+          title:'灯板设置',
+          message:"保存成功",
+        })
     });
   }
 

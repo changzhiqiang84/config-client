@@ -9,14 +9,14 @@ const electron = require('electron');
 const child_process = require('child_process');
 const path = require('path');
 const fsex = require("fs-extra")
-const { copyFileSync, unlink, readFileSync, writeFileSync } = require('fs')
+const { copyFileSync, unlink, readFileSync, writeFileSync, renameSync } = require('fs')
 
 import React, { Component } from 'react';
 import { Window, Button,Label,Radio,View,NavPane, NavPaneItem, Text,TextInput } from 'react-desktop/windows';
 import ReactDOM from 'react-dom';
 let config = window.readConfig();
 let playerConfig = window.readPlayerConfig();
-
+let ext = '.swf'
 class MainComponent extends Component {
   static defaultProps = {
     color: '#cc7f29',
@@ -80,6 +80,7 @@ class MainComponent extends Component {
     let pt = path.join(process.env.PUBLIC, '/TileLEDPlayer/video/')
     playerConfig && playerConfig.swfs && playerConfig.swfs.map((item, index) => (
       item.path = item.path.replace(pt, ''),
+      item.path = item.path.substr(0, item.path.indexOf('.')),
       item.index = index + 1
     ))
     obj.setState({ playList: playerConfig })
@@ -97,8 +98,9 @@ class MainComponent extends Component {
           const files = event.target.files
           let obj = Object.assign({}, this.state.playList)
           obj && obj.swfs && obj.swfs.map((item, index) => (
-            item.path = path.join(process.env.PUBLIC, '/TileLEDPlayer/video/' + item.path)
+            item.path = path.join(process.env.PUBLIC, '/TileLEDPlayer/video/' + item.path + ext)
           ))
+          let originIndex = obj.swfs.length
           for (let f = 0; f < files.length; f++) {  
             let name = files[f].name
             let tmp = path.join(process.env.PUBLIC, '/TileLEDPlayer/video/' + name)
@@ -107,7 +109,8 @@ class MainComponent extends Component {
             obj.swfs.push(
               {
                 path: path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ name),
-                duration: 10
+                duration: 10,
+                index: originIndex + f + 1
               }
             )
           }
@@ -216,10 +219,15 @@ class MainComponent extends Component {
           <Button push color={this.props.color} theme={this.props.theme} style={{marginLeft: '10px'}} onClick={this.handleSave}>
           保存
           </Button>
-          <input type="file" id="btn_file" multiple style={{display: 'none'}}/>
+          <input type="file" id="btn_file" accept=".swf" multiple style={{display: 'none'}}/>
         </View>
       </NavPaneItem>
     );
+  }
+
+  initReceive(title) {
+    this.setState({ selected: title })
+    this.handleReceiveCardReset()
   }
 
   renderReceiveCard(title, content) {
@@ -232,7 +240,7 @@ class MainComponent extends Component {
         theme="light"
         background="#ffffff"
         selected={this.state.selected === title}
-        onSelect={() => this.setState({ selected: title })}
+        onSelect={() => this.initReceive(title)}
         padding="10px 20px"
         push
       >
@@ -264,7 +272,7 @@ class MainComponent extends Component {
           />
       </View>
       <Label>布局配置：</Label>
-      <div style={{ overflow:'auto',height:'40%',width:'fit-content', maxWidth:'80vw'}}>
+      <div style={{ overflow:'auto',height:'40vh',width:'70vw'}}>
       {
         receiveYArr.map( ii =>(
                 <View padding="0px 20px" horizontalAlignment='left' layout='horizontal' theme={this.props.theme}>{
@@ -345,27 +353,50 @@ class MainComponent extends Component {
   }
 
   handleDelete(data) {
-    unlink(path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ data.path), () => {
+    unlink(path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ data.path + ext), () => {
       console.log('删除成功')
     })
     let obj = Object.assign({}, this.state.playList)
     if (obj && obj.swfs) {
       obj.swfs = obj.swfs.filter(item => item.index !== data.index)
       obj.swfs.map((item, index) => (
-        item.path = path.join(process.env.PUBLIC, '/TileLEDPlayer/video/' + item.path)
+        item.path = path.join(process.env.PUBLIC, '/TileLEDPlayer/video/' + item.path + ext)
       ))
     }
     this.writePlayList(this, obj)
   }
 
   handleSave() {
+    let originData = window.readPlayerConfig()
     let obj = Object.assign({}, this.state.playList)
+    let hasError =  false
     if (obj && obj.swfs) {
       obj.swfs.map(item => {
-        item.path = path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ item.path)
+        if (!item.path || !item.duration || item.duration <= 0) {
+          hasError = true
+        }
+      })
+      if(hasError) {
+        electron.ipcRenderer.send('playlist-change', 'error')
+        return
+      }
+      obj.swfs.map(item => {
+        item.path = path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ item.path + ext)
       })
     }
     this.writePlayList(this, obj)
+    originData && originData.swfs && originData.swfs.map((origin, index) => (
+      obj.swfs.map(item => {
+        if (origin.index === item.index) {
+          try {
+            renameSync(origin.path, item.path)
+          } catch (error) {
+            console.log(error)
+          }
+        }
+      })
+    ))
+    electron.ipcRenderer.send('playlist-change')
   }
 
   handleUpload() {
@@ -530,7 +561,7 @@ class MainComponent extends Component {
   }
   fsex.writeJSON(path.resolve(release_app_dir,'./package.json'),packagejson);
   }
-  
+
   renderLayoutSettings(title, content) {
     return (
       <NavPaneItem
@@ -592,7 +623,7 @@ class MainComponent extends Component {
             defaultValue = {this.state.displayHeight}
           />
         </View>
-        <Label>灯板布局：</Label>
+        {/* <Label>灯板布局：</Label>
         <View horizontalAlignment="left" layout="horizontal" padding="10px" theme={this.props.theme}>
           <Radio
             color={this.props.color}
@@ -613,7 +644,7 @@ class MainComponent extends Component {
             defaultValue="2"
             defaultChecked={this.state.ledPanalLayoutType==2}      
           />
-        </View>  
+        </View>   */}
 
         <View horizontalAlignment="left" verticalAlignment="center" layout="horizontal" padding="50px" margin="10px 10px" theme={this.props.theme}>    
           <Button push color={this.props.color} theme={this.props.theme} type = "submit" onClick={this.handleSensorSave}>

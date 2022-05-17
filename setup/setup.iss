@@ -23,8 +23,7 @@ SolidCompression=yes
 WizardStyle=modern
 
 [Languages]
-Name: "chs"; MessagesFile: ".\Languages\ChineseSimplified.isl"  
-Name: "eng"; MessagesFile: ".\Languages\Eng.isl"
+Name: "chs"; MessagesFile: ".\Languages\ChineseSimplified.isl" 
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -33,6 +32,21 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "D:\app\config-client\packaged\TileLEDPlayer-win32-x64\TileLEDPlayer.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\app\config-client\packaged\TileLEDPlayer-win32-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
+
+[code]
+//删除所有配置文件以达到干净卸载的目的
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if (CurUninstallstep <> usPostUninstall) then
+    Exit;
+   DelTree(ExpandConstant('{app}'), True, True, True);
+  if UninstallSilent() then
+    Exit;
+  if MsgBox(ExpandConstant('需要删除此软件系统产生的数据吗？包括添加的文件，配置数据等'), mbError, MB_YESNOCANCEL) <> IDYES then
+    Exit;
+  DelTree(ExpandConstant('{%public}\{#MyAppName}'),true,true,true);
+end;
+[/code]
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

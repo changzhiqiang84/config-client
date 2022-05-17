@@ -3,6 +3,15 @@
     "y": 0,
     "width": 800,
     "height": 600,
-    "swfs": [],
+    "swfs": [
+        {
+            "path": "C:\\Users\\Public\\TileLEDPlayer\\video\\弹钢琴.swf",
+            "duration": 10
+        },
+        {
+            "path": "C:\\Users\\Public\\TileLEDPlayer\\video\\蓝色滑块.swf",
+            "duration": 10
+        }
+    ],
     "playerPath": "./SwfScrollPlayer"
 }
