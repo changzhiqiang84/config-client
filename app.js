@@ -119,6 +119,13 @@ class App {
     this.loadSettings();
     this.startTCPClient(global.app.config.server.host, global.app.config.server.port);
     //
+    electron.ipcMain.on('process-check', (e, args) => {
+      electron.dialog.showMessageBox({
+        type: 'error',
+        title:'播放列表',
+        message:"程序已启动",
+      })
+    });
     electron.ipcMain.on('playlist-change', (e, args) => {
       if (args) {
         electron.dialog.showMessageBox({
@@ -130,7 +137,7 @@ class App {
         electron.dialog.showMessageBox({
           type: 'info',
           title:'播放列表',
-          message:"保存成功",
+          message:"保存成功，重新启动后生效",
         })
       }
     });
@@ -175,6 +182,16 @@ class App {
           message:"保存成功",
         })
     });
+    electron.ipcMain.on('delete-check', (e, args) => {
+      let res = electron.dialog.showMessageBoxSync({
+        type: 'info',
+        title:'播放列表',
+        message:"删除该文件?",
+        buttons: ['确认','取消']
+      })
+      e.returnValue = res===0 ? 'ok' : 'cancel'
+    });
+    
     electron.ipcMain.on('sensor-change', (e, args) => {
       let data = JSON.parse(args);
       if (data.displayWidth === '' || data.displayHeight === '' || data.sensorWidth === '' || data.sensorHeight === '') {
@@ -214,7 +231,7 @@ class App {
       global.app.rootdir = path.resolve(__dirname, './');
     } else {
       global.app.entrydir = path.resolve(__dirname, './');
-      global.app.rootdir = path.resolve(path.dirname(process.argv[0]), './resources/app');
+      global.app.rootdir = path.resolve(path.dirname(process.argv[0]), './resources/app.asar');
     }
 
     if (global.app.release) {

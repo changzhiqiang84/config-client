@@ -9,7 +9,8 @@ const electron = require('electron');
 const child_process = require('child_process');
 const path = require('path');
 const fsex = require("fs-extra")
-const { copyFileSync, unlink, readFileSync, writeFileSync, renameSync } = require('fs')
+const uuid = require("uuid");
+const { copyFileSync, unlink, readFileSync, writeFileSync, renameSync, readdirSync } = require('fs')
 
 import React, { Component } from 'react';
 import { Window, Button,Label,Radio,View,NavPane, NavPaneItem, Text,TextInput } from 'react-desktop/windows';
@@ -54,6 +55,7 @@ class MainComponent extends Component {
     
     this.handleReceiveX = this.handleReceiveX.bind(this);
     this.handleReceiveY = this.handleReceiveY.bind(this);
+    this.handlePreview = this.handlePreview.bind(this);
 
     //handle focus 
     this.ipInput = React.createRef();
@@ -62,9 +64,9 @@ class MainComponent extends Component {
     this.sensorHInput = React.createRef();
     this.displayWInput = React.createRef();
     this.displayHInput = React.createRef();  
-
+    this.xCount = React.createRef();
+    this.yCount = React.createRef();
   }
-
   initSize() {
     let width = this.state.displayWidth * this.state.receiveXCount
     let height = this.state.displayHeight * this.state.receiveYCount
@@ -78,11 +80,20 @@ class MainComponent extends Component {
   initPlayList(obj) {
     playerConfig = window.readPlayerConfig()
     let pt = path.join(process.env.PUBLIC, '/TileLEDPlayer/video/')
-    playerConfig && playerConfig.swfs && playerConfig.swfs.map((item, index) => (
-      item.path = item.path.replace(pt, ''),
-      item.path = item.path.substr(0, item.path.indexOf('.')),
-      item.index = index + 1
-    ))
+    if (playerConfig && playerConfig.swfs && playerConfig.swfs.length > 0) {
+      playerConfig.swfs = playerConfig.swfs.sort(function(x,y) {
+        return x.index - y.index;
+      })
+      playerConfig.swfs.map((item, index) => (
+        item.path = item.path.replace(pt, ''),
+        item.path = item.path.substr(0, item.path.indexOf('.'))
+      ))
+    }
+    // playerConfig && playerConfig.swfs && playerConfig.swfs.map((item, index) => (
+    //   item.path = item.path.replace(pt, ''),
+    //   item.path = item.path.substr(0, item.path.indexOf('.')),
+    //   item.index = item.index
+    // ))
     obj.setState({ playList: playerConfig })
   }
 
@@ -100,7 +111,7 @@ class MainComponent extends Component {
           obj && obj.swfs && obj.swfs.map((item, index) => (
             item.path = path.join(process.env.PUBLIC, '/TileLEDPlayer/video/' + item.path + ext)
           ))
-          let originIndex = obj.swfs.length
+          let originIndex = obj.swfs.length > 0 ? obj.swfs[obj.swfs.length-1].index : 0
           for (let f = 0; f < files.length; f++) {  
             let name = files[f].name
             let tmp = path.join(process.env.PUBLIC, '/TileLEDPlayer/video/' + name)
@@ -110,7 +121,8 @@ class MainComponent extends Component {
               {
                 path: path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ name),
                 duration: 10,
-                index: originIndex + f + 1
+                index: originIndex + f + 1,
+                id: uuid.v1()
               }
             )
           }
@@ -181,7 +193,9 @@ class MainComponent extends Component {
               {
                 this.state.playList && this.state.playList.swfs && this.state.playList.swfs.map( (item, index) => (
                   <tr>
-                    <td>{item.index}</td>
+                    <td>
+                      <input type="number" min="1" max="9999999" name="index" value={item.index} onChange={() => this.handleChange(event, item, 'index')}></input>
+                    </td>
                     <td>
                       <input type="text" name="path" value={item.path} onChange={() => this.handleChange(event, item, 'path')}></input>
                     </td>
@@ -248,31 +262,36 @@ class MainComponent extends Component {
        <Label>接收卡：</Label>
         <View horizontalAlignment="left" layout="horizontal" padding="10px" theme={this.props.theme}>          
         <TextInput
+            ref={this.yCount}
             theme={this.props.theme}
             color={this.props.color}
             background
             label="接收卡行数"
             labelColor = "black"
             placeholder="请输入接收卡行数"
-            value={this.state.receiveYCount}
+            defaultValue={this.state.receiveYCount}
             width="30px"
             onChange={this.handleReceiveY}
           />
         <Label>&nbsp;&nbsp;</Label>
          <TextInput
+            ref={this.xCount}
             theme={this.props.theme}
             color={this.props.color}
             background
             label="接收卡列数"
             labelColor = "black"
             placeholder="请输入接收卡列数"
-            value={this.state.receiveXCount}
+            defaultValue={this.state.receiveXCount}
             width="30px"
             onChange={this.handleReceiveX}
           />
+          <Button push color={this.props.color} theme={this.props.theme} onClick={this.handlePreview} style={{height: '32px',marginTop: '30px'}}>
+            预览
+          </Button>  
       </View>
       <Label>布局配置：</Label>
-      <div style={{ overflow:'auto',height:'40vh',width:'70vw'}}>
+      <div style={{ overflow:'auto',height:'42vh',width:'70vw'}}>
       {
         receiveYArr.map( ii =>(
                 <View padding="0px 20px" horizontalAlignment='left' layout='horizontal' theme={this.props.theme}>{
@@ -341,7 +360,8 @@ class MainComponent extends Component {
     let obj = Object.assign({}, this.state.playList)
     if (obj && obj.swfs) {
       obj.swfs.map(item => {
-        if (item.index === data.index) {
+        if (item.id === data.id) {
+          item.index = flag === 'index' ? e.target.value : data.index
           item.path = flag === 'path' ? e.target.value : data.path
           item.duration = flag === 'duration' ? e.target.value : data.duration
         }
@@ -353,17 +373,20 @@ class MainComponent extends Component {
   }
 
   handleDelete(data) {
-    unlink(path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ data.path + ext), () => {
-      console.log('删除成功')
-    })
-    let obj = Object.assign({}, this.state.playList)
-    if (obj && obj.swfs) {
-      obj.swfs = obj.swfs.filter(item => item.index !== data.index)
-      obj.swfs.map((item, index) => (
-        item.path = path.join(process.env.PUBLIC, '/TileLEDPlayer/video/' + item.path + ext)
-      ))
+    // unlink(path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ data.path + ext), () => {
+    //   console.log('删除成功')
+    // })
+    var ret_msg = electron.ipcRenderer.sendSync('delete-check')
+    if (ret_msg === 'ok') {
+      let obj = Object.assign({}, this.state.playList)
+      if (obj && obj.swfs) {
+        obj.swfs = obj.swfs.filter(item => item.id !== data.id)
+        obj.swfs.map((item, index) => (
+          item.path = path.join(process.env.PUBLIC, '/TileLEDPlayer/video/' + item.path + ext)
+        ))
+      }
+      this.writePlayList(this, obj)
     }
-    this.writePlayList(this, obj)
   }
 
   handleSave() {
@@ -372,7 +395,7 @@ class MainComponent extends Component {
     let hasError =  false
     if (obj && obj.swfs) {
       obj.swfs.map(item => {
-        if (!item.path || !item.duration || item.duration <= 0) {
+        if (!item.path || !item.duration || item.duration <= 0 || !item.index || item.index <= 0) {
           hasError = true
         }
       })
@@ -382,12 +405,16 @@ class MainComponent extends Component {
       }
       obj.swfs.map(item => {
         item.path = path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ item.path + ext)
+        item.index = parseInt(item.index)
+      })
+      obj.swfs = obj.swfs.sort(function(x,y) {
+        return x.index - y.index;
       })
     }
     this.writePlayList(this, obj)
     originData && originData.swfs && originData.swfs.map((origin, index) => (
       obj.swfs.map(item => {
-        if (origin.index === item.index) {
+        if (origin.id === item.id) {
           try {
             renameSync(origin.path, item.path)
           } catch (error) {
@@ -404,13 +431,51 @@ class MainComponent extends Component {
 }
 
   handlePlayStart() {
-    if(this.state.playList && this.state.playList.swfs && this.state.playList.swfs.length > 0) {
-      child_process.exec('.\\PlayerStarter.exe start '+ path.resolve(process.env.PUBLIC, './TileLEDPlayer/config.json'), {cwd: playerConfig.playerPath})
-    }
+    try {
+      let _this = this
+      child_process.exec('tasklist | findstr "SwfScrollPlayer.exe"', function(err, stdout, stderr) {
+        if (stdout) {
+          electron.ipcRenderer.send('process-check')
+        } else {
+          if(_this.state.playList && _this.state.playList.swfs && _this.state.playList.swfs.length > 0) {
+            child_process.exec('.\\PlayerStarter.exe start '+ path.resolve(process.env.PUBLIC, './TileLEDPlayer/config.json'), {cwd: playerConfig.playerPath})
+          }
+        }
+      })
+    } catch (error) {}
   }
 
   handlePlayStop() {
     child_process.exec('.\\PlayerStarter.exe stop '+ path.resolve(process.env.PUBLIC, './TileLEDPlayer/config.json'), {cwd: playerConfig.playerPath})
+
+    let dt = window.readPlayerConfig()
+    let fileData = readdirSync(path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'))
+    let delFileName = []
+    if (fileData && fileData.length > 0) {
+      for (let i = 0; i < fileData.length; i++) {
+        if (dt && dt.swfs && dt.swfs.length > 0) {
+          let exit = false
+          for (let d = 0; d < dt.swfs.length; d++) {
+            let item = dt.swfs[d]
+            if (item.path.indexOf(fileData[i]) >= 0) {
+              exit = true
+            }
+          }
+          if (!exit) {
+            delFileName.push(fileData[i])
+          }
+        } else {
+          delFileName.push(fileData[i])
+        }
+      }
+    }
+    if (delFileName.length > 0) {
+      delFileName.map(dd => {
+        unlink(path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'+ dd), () => {
+          console.log('删除成功')
+        })
+      })
+    }
   }
   
   handlePlayPrev() {
@@ -447,32 +512,19 @@ class MainComponent extends Component {
     if(!this.validInt(e.target.value)){     
       return false;
     }
-    let x = Math.floor(e.target.value);
-    this.state.layout = [];
-    for(let i=0;i<this.state.receiveYCount;i++){
-      for(let j = 0;j<x;j++){
-        this.state.layout.push({
-          x:j,
-          y:i,
-          netPort:1,
-          card:1
-        });
-      }
-    }
-    this.setState({      
-      layout:this.state.layout,
-      receiveXCount:x
-    })
-
   }
   handleReceiveY(e){
     if(!this.validInt(e.target.value)){      
       return false;
     }
-    let y = Math.floor(e.target.value);
+  }
+  
+  handlePreview() {
+    let x = Math.floor(this.xCount.current.value);
+    let y = Math.floor(this.yCount.current.value);
     this.state.layout = [];
     for(let i=0;i<y;i++){
-      for(let j = 0;j<this.state.receiveXCount;j++){
+      for(let j = 0;j<x;j++){
         this.state.layout.push({
           x:j,
           y:i,
@@ -483,6 +535,7 @@ class MainComponent extends Component {
     }
     this.setState({      
       layout:this.state.layout,
+      receiveXCount:x,
       receiveYCount:y
     })
   }

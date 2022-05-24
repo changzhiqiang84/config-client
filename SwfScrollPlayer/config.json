@@ -6,11 +6,15 @@
     "swfs": [
         {
             "path": "C:\\Users\\Public\\TileLEDPlayer\\video\\弹钢琴.swf",
-            "duration": 10
+            "duration": 10,
+            "index": 1,
+            "id": "522d4f90-d82a-11ec-9b1f-6b33a79f02fb"
         },
         {
             "path": "C:\\Users\\Public\\TileLEDPlayer\\video\\蓝色滑块.swf",
-            "duration": 10
+            "duration": 10,
+            "index": 2,
+            "id": "522debd0-d82a-11ec-9b1f-6b33a79f02fb"
         }
     ],
     "playerPath": "./SwfScrollPlayer"
