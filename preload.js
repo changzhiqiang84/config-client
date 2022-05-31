@@ -23,16 +23,16 @@ window.readPlayerConfig = () => {
   let configPath = "./SwfScrollPlayer/config.json";
   let playerPath = "./SwfScrollPlayer";
   let videoPath = './SwfScrollPlayer/video/'
-  if(release){
-    configPath="./resources/app/SwfScrollPlayer/config.json";
-    playerPath="./resources/app/SwfScrollPlayer";
-    videoPath = './resources/app/SwfScrollPlayer/video/'
-  }
+  // if(release){
+  //   configPath="./resources/app.asar/SwfScrollPlayer/config.json";
+  //   playerPath="./resources/app.asar/SwfScrollPlayer";
+  //   videoPath = './resources/app.asar/SwfScrollPlayer/video/'
+  // }
   try {
     statSync(path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'));
   } catch (error) {
     fsex.ensureDirSync(path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'))
-    fsex.copy(videoPath, path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'), function (err) {})
+    fsex.copySync(videoPath, path.resolve(process.env.PUBLIC, './TileLEDPlayer/video/'))
   }
   try {
     accessSync(path.resolve(process.env.PUBLIC, './TileLEDPlayer/config.json'), constants.R_OK | constants.W_OK)

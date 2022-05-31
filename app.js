@@ -187,7 +187,8 @@ class App {
         type: 'info',
         title:'播放列表',
         message:"删除该文件?",
-        buttons: ['确认','取消']
+        buttons: ['确认','取消'],
+        cancelId: 1,
       })
       e.returnValue = res===0 ? 'ok' : 'cancel'
     });
@@ -198,7 +199,7 @@ class App {
         electron.dialog.showMessageBox({
           type: 'error',
           title:'灯板设置',
-          message:"保存信息有误",
+          message:"信息不能为空",
         })
         return
       }
