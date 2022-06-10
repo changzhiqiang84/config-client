@@ -15,7 +15,7 @@ const os = require('os');
 const child_process = require('child_process');
 const tracer = require('tracer');
 const robot = require("robotjs");
-const { Menu } = require('electron');
+const { Menu, BrowserWindow } = require('electron');
 
 const BUFFER_0 = Buffer.from('00', 'hex');
 const BUFFER_1 = Buffer.from('01', 'hex');
@@ -120,7 +120,7 @@ class App {
     this.startTCPClient(global.app.config.server.host, global.app.config.server.port);
     //
     electron.ipcMain.on('process-check', (e, args) => {
-      electron.dialog.showMessageBox({
+      electron.dialog.showMessageBox(BrowserWindow.getFocusedWindow(), {
         type: 'error',
         title:'播放列表',
         message:"程序已启动",
@@ -128,13 +128,13 @@ class App {
     });
     electron.ipcMain.on('playlist-change', (e, args) => {
       if (args) {
-        electron.dialog.showMessageBox({
+        electron.dialog.showMessageBox(BrowserWindow.getFocusedWindow(), {
           type: 'error',
           title:'播放列表',
           message:"保存信息有误",
         })
       } else {
-        electron.dialog.showMessageBox({
+        electron.dialog.showMessageBox(BrowserWindow.getFocusedWindow(), {
           type: 'info',
           title:'播放列表',
           message:"保存成功，重新启动后生效",
@@ -145,7 +145,7 @@ class App {
       let last = JSON.parse(JSON.stringify(global.app.config));
       let data = JSON.parse(args);
       if (!data.host || data.port === '' || data.port === undefined) {
-        electron.dialog.showMessageBox({
+        electron.dialog.showMessageBox(BrowserWindow.getFocusedWindow(), {
           type: 'error',
           title:'服务器设置',
           message:"保存信息有误",
@@ -158,7 +158,7 @@ class App {
         this.startTCPClient(data.host, data.port);
       }
 
-      electron.dialog.showMessageBox({
+      electron.dialog.showMessageBox(BrowserWindow.getFocusedWindow(), {
         type: 'info',
         title:'服务器设置',
         message:"保存成功",
@@ -167,7 +167,7 @@ class App {
     electron.ipcMain.on('card-change', (e, args) => {
       let data = JSON.parse(args);
       if (data.receiveXCount === '' || data.receiveYCount === '') {
-        electron.dialog.showMessageBox({
+        electron.dialog.showMessageBox(BrowserWindow.getFocusedWindow(), {
           type: 'error',
           title:'接收卡设置',
           message:"保存信息有误",
@@ -176,14 +176,14 @@ class App {
       }
         global.app.config.receiveCards=data;
         this._saveConfig(global.app.config);
-        electron.dialog.showMessageBox({
+        electron.dialog.showMessageBox(BrowserWindow.getFocusedWindow(), {
           type: 'info',
           title:'接收卡设置',
           message:"保存成功",
         })
     });
     electron.ipcMain.on('delete-check', (e, args) => {
-      let res = electron.dialog.showMessageBoxSync({
+      let res = electron.dialog.showMessageBoxSync(BrowserWindow.getFocusedWindow(), {
         type: 'info',
         title:'播放列表',
         message:"删除该文件?",
@@ -196,7 +196,7 @@ class App {
     electron.ipcMain.on('sensor-change', (e, args) => {
       let data = JSON.parse(args);
       if (data.displayWidth === '' || data.displayHeight === '' || data.sensorWidth === '' || data.sensorHeight === '') {
-        electron.dialog.showMessageBox({
+        electron.dialog.showMessageBox(BrowserWindow.getFocusedWindow(), {
           type: 'error',
           title:'灯板设置',
           message:"信息不能为空",
@@ -205,7 +205,7 @@ class App {
       }
         global.app.config.sensor=data;
         this._saveConfig(global.app.config);
-        electron.dialog.showMessageBox({
+        electron.dialog.showMessageBox(BrowserWindow.getFocusedWindow(), {
           type: 'info',
           title:'灯板设置',
           message:"保存成功",
